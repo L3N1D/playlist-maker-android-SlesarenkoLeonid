@@ -1,11 +1,10 @@
-package com.practicum.myapplication.ui
+package com.practicum.myapplication.ui.search
 
-import android.os.Bundle
-import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Clear
@@ -19,21 +18,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import com.practicum.myapplication.R
-
-class SearchActivity : ComponentActivity() {
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setContent {
-            MaterialTheme {
-                SearchScreen { finish() }
-            }
-        }
-    }
-}
+import com.practicum.myapplication.ui.item.TrackListItem
 
 @Composable
-fun SearchScreen(onNavigateBack: () -> Unit) {
+fun SearchScreen(modifier: Modifier, viewModel: SearchViewModel, onNavigateBack: () -> Unit) {
+    val screenState by viewModel.searchScreenState.collectAsState()
     var query by remember { mutableStateOf("") }
 
     Column(
@@ -50,7 +41,7 @@ fun SearchScreen(onNavigateBack: () -> Unit) {
                 painter = painterResource(id = R.drawable.back),
                 contentDescription = "Назад",
                 modifier = Modifier
-                    .size(24.dp)
+                    .size(16.dp)
                     .clickable { onNavigateBack() }
             )
             Spacer(modifier = Modifier.width(16.dp))
@@ -62,7 +53,7 @@ fun SearchScreen(onNavigateBack: () -> Unit) {
             )
         }
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(24.dp))
 
         TextField(
             value = query,
@@ -71,6 +62,9 @@ fun SearchScreen(onNavigateBack: () -> Unit) {
             singleLine = true,
             leadingIcon = {
                 Icon(
+                    modifier = Modifier.clickable {
+                        viewModel.search(query)
+                    },
                     imageVector = Icons.Default.Search,
                     contentDescription = "Поиск",
                     tint = Color(0xFFAEAFB4)
@@ -104,5 +98,64 @@ fun SearchScreen(onNavigateBack: () -> Unit) {
                 fontSize = 16.sp
             )
         )
+        when (screenState) {
+            is SearchState.Initial -> {
+                Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text("Воспользуйтесь поиском")
+                }
+            }
+
+            is SearchState.Searching -> {
+                Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text("Ищем...")
+                }
+            }
+
+            is SearchState.Success -> {
+                val tracks = (screenState as SearchState.Success).list
+                if (tracks.isEmpty()) {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Image(
+                                painter = painterResource(id = R.drawable.empty_search),
+                                contentDescription = stringResource(R.string.title_empty),
+                                modifier = Modifier.size(120.dp)
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Text(
+                                text = stringResource(R.string.title_empty),
+                                fontSize = 16.sp,
+                                color = Color(0xFF7A7C81)
+                            )
+                        }
+                    }
+                } else {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(vertical = 8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        items(tracks.size) { index ->
+                            TrackListItem(track = tracks[index])
+                            HorizontalDivider(thickness = 0.5.dp)
+                        }
+                    }
+                }
+            }
+
+            is SearchState.Fail -> {
+                val error = (screenState as SearchState.Fail).error
+                Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text("Ошибка: $error", color = Color.Red)
+                }
+            }
+        }
     }
 }
+
+
+
+
