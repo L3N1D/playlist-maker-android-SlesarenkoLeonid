@@ -1,4 +1,4 @@
-package com.practicum.myapplication.data.network
+packagecom.practicum.myapplication.data.network
 
 data class Track(
     val trackName: String,
